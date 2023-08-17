@@ -31,6 +31,7 @@ jobs:
         uses: actions/setup-java@v3.12.0
         with:
           java-version: '17'
+          distribution: 'temurin'
           cache: gradle
 
       - run: echo "The workflow is now ready to test your code."
