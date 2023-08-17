@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">MoviesApp</string>
+    <string name="overview">Overview</string>
+    <string name="movies_app">Movies App</string>
+    <string name="filter_by_favourite">Filter by Favourite</string>
+    <string name="show_all_movies">Show all movies</string>
 </resources>
