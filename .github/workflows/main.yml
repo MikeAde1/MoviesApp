@@ -36,6 +36,14 @@ jobs:
 
       - run: echo "The workflow is now ready to test your code."
 
+      # Execute unit tests
+      - name: Unit Test
+        run: ./gradlew testDebugUnitTest
+
+      - name: Android Test Report
+        uses: asadmansr/android-test-report-action@v1.2.0
+        if: ${{ always() }} # IMPORTANT: run Android Test Report regardless
+
       - name: Build with gradle
         run: ./gradlew build
 
