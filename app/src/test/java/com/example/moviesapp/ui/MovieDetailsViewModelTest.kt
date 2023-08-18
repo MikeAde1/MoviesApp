@@ -1,7 +1,5 @@
 package com.example.moviesapp.ui
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.Observer
 import com.example.moviesapp.domain.GetMovieDetailsUseCase
 import com.example.moviesapp.ui.features.details.MovieDetailsUiState
 import com.example.moviesapp.ui.features.details.MovieDetailsViewModel
@@ -24,14 +22,10 @@ class MovieDetailsViewModelTest {
     @get:Rule
     var rxRule = RxSchedulersOverrideRule()
 
-    @get:Rule
-    var liveDataRule = InstantTaskExecutorRule()
 
     private lateinit var viewModel: MovieDetailsViewModel
 
     private val getMovieDetailsUseCase: GetMovieDetailsUseCase = mock()
-
-    private val liveDataObserver = mock<Observer<Any>>()
 
     private val fakeErrorMessage = "An error occurred"
     private val jsonResponse = "{\"status_message\":\"$fakeErrorMessage\"}"
@@ -58,11 +52,12 @@ class MovieDetailsViewModelTest {
         )
         viewModel = MovieDetailsViewModel(getMovieDetailsUseCase)
 
-        viewModel.movieDetailsUiState.observeForever(liveDataObserver)
         viewModel.getMovieDetails(movieId)
         verify(getMovieDetailsUseCase).invoke(movieId)
-        verify(liveDataObserver).onChanged(
-            MovieDetailsUiState(isLoading = false, errorMessage = fakeErrorMessage)
+
+        assert(
+            viewModel.movieDetailsUiState.value ==
+                    MovieDetailsUiState(isLoading = false, errorMessage = fakeErrorMessage)
         )
     }
 
@@ -74,11 +69,10 @@ class MovieDetailsViewModelTest {
             )
         )
         viewModel = MovieDetailsViewModel(getMovieDetailsUseCase)
-        viewModel.movieDetailsUiState.observeForever(liveDataObserver)
         viewModel.getMovieDetails(movieId)
         verify(getMovieDetailsUseCase).invoke(movieId)
-        verify(liveDataObserver).onChanged(
-            MovieDetailsUiState(
+        assert(
+            viewModel.movieDetailsUiState.value == MovieDetailsUiState(
                 isLoading = false, errorMessage = GENERIC_ERROR_MESSAGE
             )
         )
@@ -88,10 +82,12 @@ class MovieDetailsViewModelTest {
     fun `display favorite movies in UI if movies if call to fetch favourite movies is successful`() {
         viewModel = MovieDetailsViewModel(getMovieDetailsUseCase)
 
-        viewModel.movieDetailsUiState.observeForever(liveDataObserver)
         viewModel.getMovieDetails(movieId)
 
         verify(getMovieDetailsUseCase).invoke(movieId)
-        verify(liveDataObserver).onChanged(MovieDetailsUiState(movieDetail = movieDetailResult))
+        assert(
+            viewModel.movieDetailsUiState.value ==
+                    MovieDetailsUiState(movieDetail = movieDetailResult)
+        )
     }
 }

@@ -1,7 +1,5 @@
 package com.example.moviesapp.ui
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import androidx.lifecycle.Observer
 import com.example.moviesapp.domain.GetFavoriteMoviesUseCase
 import com.example.moviesapp.domain.GetLocalMovieListUseCase
 import com.example.moviesapp.domain.GetRemoteMovieListUseCase
@@ -26,12 +24,7 @@ class MovieListViewModelTest {
     @get:Rule
     var rxRule = RxSchedulersOverrideRule()
 
-    @get:Rule
-    var liveDataRule = InstantTaskExecutorRule()
-
     private lateinit var viewModel: MovieListViewModel
-
-    private val liveDataObserver = mock<Observer<Any>>()
 
     private val getRemoteMovieListUseCase: GetRemoteMovieListUseCase = mock()
 
@@ -66,11 +59,10 @@ class MovieListViewModelTest {
             getLocalMovieListUseCase,
             getFavoriteMoviesUseCase
         )
-        viewModel.moviesUiState.observeForever(liveDataObserver)
 
         verify(getLocalMovieListUseCase).invoke()
-        verify(liveDataObserver).onChanged(
-            MovieListUiState(
+        assert(
+            viewModel.moviesUiState.value == MovieListUiState(
                 isLoading = false,
                 errorMessage = GENERIC_ERROR_MESSAGE
             )
@@ -85,11 +77,9 @@ class MovieListViewModelTest {
             getFavoriteMoviesUseCase
         )
 
-        viewModel.moviesUiState.observeForever(liveDataObserver)
-
         verify(getLocalMovieListUseCase).invoke()
         verify(getRemoteMovieListUseCase).invoke()
-        verify(liveDataObserver).onChanged(MovieListUiState())
+        assert(viewModel.moviesUiState.value == MovieListUiState())
     }
 
     @Test
@@ -101,10 +91,8 @@ class MovieListViewModelTest {
             getFavoriteMoviesUseCase
         )
 
-        viewModel.moviesUiState.observeForever(liveDataObserver)
-
         verify(getLocalMovieListUseCase).invoke()
-        verify(liveDataObserver).onChanged(MovieListUiState(movieList = listOf(MovieItemResult())))
+        assert(viewModel.moviesUiState.value == MovieListUiState(movieList = listOf(MovieItemResult())))
     }
 
 
@@ -119,12 +107,10 @@ class MovieListViewModelTest {
             getLocalMovieListUseCase,
             getFavoriteMoviesUseCase
         )
-        viewModel.moviesUiState.observeForever(liveDataObserver)
 
-        // viewModel.getAllMovies() has been called at initiation point
         verify(getRemoteMovieListUseCase).invoke()
-        verify(liveDataObserver).onChanged(
-            MovieListUiState(
+        assert(
+            viewModel.moviesUiState.value == MovieListUiState(
                 isLoading = false,
                 errorMessage = fakeErrorMessage
             )
@@ -139,11 +125,10 @@ class MovieListViewModelTest {
             getLocalMovieListUseCase,
             getFavoriteMoviesUseCase
         )
-        viewModel.moviesUiState.observeForever(liveDataObserver)
 
         verify(getRemoteMovieListUseCase).invoke()
-        verify(liveDataObserver).onChanged(
-            MovieListUiState(
+        assert(
+            viewModel.moviesUiState.value == MovieListUiState(
                 isLoading = false,
                 errorMessage = GENERIC_ERROR_MESSAGE
             )
@@ -164,11 +149,10 @@ class MovieListViewModelTest {
             getLocalMovieListUseCase,
             getFavoriteMoviesUseCase
         )
-        viewModel.moviesUiState.observeForever(liveDataObserver)
         viewModel.getFavouriteMovies()
         verify(getFavoriteMoviesUseCase).invoke()
-        verify(liveDataObserver).onChanged(
-            MovieListUiState(
+        assert(
+            viewModel.moviesUiState.value == MovieListUiState(
                 isLoading = false,
                 errorMessage = fakeErrorMessage
             )
@@ -183,11 +167,11 @@ class MovieListViewModelTest {
             getLocalMovieListUseCase,
             getFavoriteMoviesUseCase
         )
-        viewModel.moviesUiState.observeForever(liveDataObserver)
+
         viewModel.getFavouriteMovies()
         verify(getFavoriteMoviesUseCase).invoke()
-        verify(liveDataObserver).onChanged(
-            MovieListUiState(
+        assert(
+            viewModel.moviesUiState.value == MovieListUiState(
                 isLoading = false,
                 errorMessage = GENERIC_ERROR_MESSAGE
             )
@@ -203,10 +187,10 @@ class MovieListViewModelTest {
             getFavoriteMoviesUseCase
         )
 
-        viewModel.moviesUiState.observeForever(liveDataObserver)
         viewModel.getFavouriteMovies()
 
         verify(getFavoriteMoviesUseCase).invoke()
-        verify(liveDataObserver).onChanged(MovieListUiState(movieList = listOf(MovieItemResult())))
+
+        assert(viewModel.moviesUiState.value == MovieListUiState(movieList = listOf(MovieItemResult())))
     }
 }

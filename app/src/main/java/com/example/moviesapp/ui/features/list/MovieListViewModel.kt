@@ -1,18 +1,19 @@
 package com.example.moviesapp.ui.features.list
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.moviesapp.domain.GetFavoriteMoviesUseCase
 import com.example.moviesapp.domain.GetLocalMovieListUseCase
 import com.example.moviesapp.domain.GetRemoteMovieListUseCase
 import com.example.moviesapp.ui.model.BaseUiState
 import com.example.moviesapp.ui.model.MovieItemResult
-import com.example.moviesapp.util.extensions.applyProgressBar
 import com.example.moviesapp.util.extensions.applySchedulers
 import com.example.moviesapp.util.extensions.getErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.reactivex.disposables.CompositeDisposable
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,23 +24,24 @@ class MovieListViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val disposable: CompositeDisposable = CompositeDisposable()
-    private val _moviesUiState: MutableLiveData<MovieListUiState> =
-        MutableLiveData(MovieListUiState())
-    val moviesUiState: LiveData<MovieListUiState> get() = _moviesUiState
+    private val _moviesUiState: MutableStateFlow<MovieListUiState> =
+        MutableStateFlow(MovieListUiState())
+    val moviesUiState: StateFlow<MovieListUiState> get() = _moviesUiState.asStateFlow()
 
     init {
         getAllMovies()
     }
+
     fun getAllMovies() {
         disposable.add(
             getLocalMovieListUseCase()
                 .applySchedulers()
-                .applyProgressBar(_moviesUiState)
+                .doOnSubscribe { _moviesUiState.update { it.copy(isLoading = true) } }
                 .subscribe({ result ->
                     if (result.isNullOrEmpty()) {
                         fetchMoviesFromServer()
                     } else {
-                        _moviesUiState.value = moviesUiState.value?.copy(movieList = result)
+                        _moviesUiState.update { it.copy(isLoading = false, movieList = result) }
                     }
                 }, { exception: Throwable ->
                     handleApiException(exception)
@@ -51,9 +53,9 @@ class MovieListViewModel @Inject constructor(
         disposable.add(
             getRemoteMovieListUseCase()
                 .applySchedulers()
-                .applyProgressBar(_moviesUiState)
+                .doOnSubscribe { _moviesUiState.update { it.copy(isLoading = true) } }
                 .subscribe({ result ->
-                    _moviesUiState.value = moviesUiState.value?.copy(movieList = result)
+                    _moviesUiState.update { it.copy(isLoading = false, movieList = result) }
                 }, { exception ->
                     handleApiException(exception)
                 })
@@ -61,26 +63,24 @@ class MovieListViewModel @Inject constructor(
     }
 
     private fun handleApiException(exception: Throwable) {
-        _moviesUiState.value =
-            moviesUiState.value?.copy(
+        _moviesUiState.update {
+            it.copy(
+                isLoading = false,
                 errorMessage = exception.getErrorMessage(),
                 movieList = listOf()
             )
+        }
     }
 
     fun getFavouriteMovies() {
         disposable.add(
             getFavoriteMoviesUseCase()
                 .applySchedulers()
-                .applyProgressBar(_moviesUiState)
+                .doOnSubscribe { _moviesUiState.update { it.copy(isLoading = true) } }
                 .subscribe({ result ->
-                    _moviesUiState.value = moviesUiState.value?.copy(movieList = result)
+                    _moviesUiState.update { it.copy(isLoading = false, movieList = result) }
                 }, { exception: Throwable ->
-                    _moviesUiState.value =
-                        moviesUiState.value?.copy(
-                            errorMessage = exception.getErrorMessage(),
-                            movieList = listOf()
-                        )
+                    handleApiException(exception = exception)
                 })
         )
     }
@@ -88,6 +88,10 @@ class MovieListViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         disposable.clear()
+    }
+
+    fun refresh() {
+        getAllMovies()
     }
 }
 

@@ -1,16 +1,22 @@
+@file:OptIn(ExperimentalMaterialApi::class)
+
 package com.example.moviesapp.ui.features.list
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -25,7 +31,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -43,23 +48,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.moviesapp.R
 import com.example.moviesapp.ui.features.MovieMetaData
-import com.example.moviesapp.ui.features.common.CommonCircularProgressIndicator
 import com.example.moviesapp.ui.features.common.ErrorText
 import com.example.moviesapp.ui.model.MovieItemResult
 import com.example.moviesapp.util.extensions.capitalize
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun MovieListScreen(
     movieListViewModel: MovieListViewModel,
     onMovieClicked: (MovieMetaData) -> Unit
 ) {
     var showSheet by rememberSaveable { mutableStateOf(false) }
-    val movieListUiState by movieListViewModel.moviesUiState.observeAsState()
+    val movieListUiState by movieListViewModel.moviesUiState.collectAsStateWithLifecycle()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -67,7 +73,7 @@ fun MovieListScreen(
                 TopAppBar(
                     title = { Text(text = stringResource(R.string.movies_app)) },
                     actions = {
-                        if (movieListUiState?.movieList.isNullOrEmpty().not()) {
+                        if (movieListUiState.movieList.isEmpty().not()) {
                             IconButton(onClick = {
                                 showSheet = true
                             }) {
@@ -85,7 +91,25 @@ fun MovieListScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { contentPadding ->
-        MovieListScreenByState(movieListUiState, onMovieClicked, contentPadding)
+        val pullRefreshState = rememberPullRefreshState(
+            movieListUiState.isLoading,
+            { movieListViewModel.refresh() }
+        )
+
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .pullRefresh(pullRefreshState)
+        ) {
+            MovieListScreenByState(movieListUiState, onMovieClicked)
+
+            PullRefreshIndicator(
+                movieListUiState.isLoading,
+                pullRefreshState,
+                Modifier.align(Alignment.TopCenter)
+            )
+        }
     }
 
     if (showSheet) {
@@ -95,34 +119,37 @@ fun MovieListScreen(
         ) { showSheet = false }
     }
 }
+
 @Composable
 private fun MovieListScreenByState(
     movieListUiState: MovieListUiState?,
-    onMovieClicked: (MovieMetaData) -> Unit,
-    contentPadding: PaddingValues
+    onMovieClicked: (MovieMetaData) -> Unit
 ) {
     when {
-        movieListUiState?.isLoading == true -> CommonCircularProgressIndicator()
-
         movieListUiState?.movieList?.isNotEmpty() == true ->
-            MovieList(movieListUiState.movieList, contentPadding, onMovieClicked)
+            MovieList(movieListUiState.movieList, onMovieClicked)
 
         movieListUiState?.errorMessage.isNullOrBlank().not() ->
-            ErrorText(message = movieListUiState?.errorMessage.orEmpty())
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center
+            ) {
+                item {
+                    ErrorText(message = movieListUiState?.errorMessage.orEmpty())
+                }
+            }
     }
 }
 
 @Composable
 private fun MovieList(
     movieList: List<MovieItemResult>,
-    contentPadding: PaddingValues,
     onMovieClicked: (MovieMetaData) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(10.dp),
-        contentPadding = contentPadding
+            .padding(10.dp)
     ) {
         items(movieList) { movie ->
             Surface(
@@ -219,9 +246,10 @@ private fun MoviesListPreview() {
     ) {
         MovieListScreenByState(
             MovieListUiState(
-                isLoading = false,
-                errorMessage = "An error occurred"
-            ), { }, PaddingValues(10.dp)
-        )
+                isLoading = true,
+                errorMessage = "",
+                movieList = listOf(MovieItemResult(title = "title", originalTitle = "Original"))
+            )
+        ) { }
     }
 }

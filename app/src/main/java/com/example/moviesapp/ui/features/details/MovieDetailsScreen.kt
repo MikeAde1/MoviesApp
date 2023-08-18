@@ -17,7 +17,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.moviesapp.R
@@ -71,16 +71,16 @@ fun MovieDetailsScreen(
         LaunchedEffect(key1 = viewModel) {
             movieMetaData.movieId?.let { viewModel.getMovieDetails(movieMetaData.movieId) }
         }
-        val movieDetailUiState by viewModel.movieDetailsUiState.observeAsState()
+        val movieDetailUiState by viewModel.movieDetailsUiState.collectAsStateWithLifecycle()
 
         when {
-            movieDetailUiState?.isLoading == true -> CommonCircularProgressIndicator()
+            movieDetailUiState.isLoading -> CommonCircularProgressIndicator()
 
-            movieDetailUiState?.movieDetail != null ->
-                movieDetailUiState?.movieDetail?.let { MovieDetailCover(it, contentPadding) }
+            movieDetailUiState.movieDetail != null ->
+                movieDetailUiState.movieDetail?.let { MovieDetailCover(it, contentPadding) }
 
-            movieDetailUiState?.errorMessage.isNullOrBlank().not() ->
-                ErrorText(message = movieDetailUiState?.errorMessage.orEmpty())
+            movieDetailUiState.errorMessage.isNullOrBlank().not() ->
+                ErrorText(message = movieDetailUiState.errorMessage.orEmpty())
         }
     }
 }
