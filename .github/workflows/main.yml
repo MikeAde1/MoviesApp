@@ -6,7 +6,7 @@ name: Movies App CI
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches: [ "main", "flow_implementation" ]
   pull_request:
     branches: [ "main" ]
 
@@ -45,6 +45,7 @@ jobs:
         if: ${{ always() }} # IMPORTANT: run Android Test Report regardless
 
       - name: Build with gradle
+        if: github.ref == 'refs/heads/main'
         run: ./gradlew build
 
       - run: echo "Build status report=${{ job.status }}."
